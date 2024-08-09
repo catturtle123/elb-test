@@ -5,6 +5,7 @@ import backend.like_house.global.oauth2.CustomOAuth2User;
 import backend.like_house.global.redis.RedisUtil;
 import backend.like_house.global.security.util.JWTUtil;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -29,13 +30,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         log.info("OAuth2 Login Success");
         try {
             CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
-            // 최초 OAuth 로그인 시 Guest
-            if (oAuth2User.getRole() == Role.ROLE_GUEST) {
-                String accessToken = jwtUtil.generateAccessToken(oAuth2User.getEmail(), oAuth2User.getSocialType());
-                jwtUtil.sendAccessAndRefreshToken(response, accessToken, null);
-            } else {
-                loginSuccess(response, oAuth2User);
-            }
+            loginSuccess(response, oAuth2User);
         } catch (Exception e) {
             throw e;
         }
@@ -45,9 +40,13 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         String accessToken = jwtUtil.generateAccessToken(oAuth2User.getEmail(), oAuth2User.getSocialType());
         String refreshToken = jwtUtil.generateRefreshToken(oAuth2User.getEmail(), oAuth2User.getSocialType());
 
-        jwtUtil.sendAccessAndRefreshToken(response, accessToken, refreshToken);
-
         redisUtil.saveRefreshToken(oAuth2User.getEmail(), oAuth2User.getSocialType(), refreshToken);
+
+        Cookie jwtCookie = new Cookie("accessToken", accessToken);
+        jwtCookie.setPath("/");
+        jwtCookie.setHttpOnly(true);
+        jwtCookie.setMaxAge(3600);
+        response.addCookie(jwtCookie);
 
         response.sendRedirect("http://localhost:5173");
     }
