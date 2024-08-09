@@ -8,6 +8,7 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +32,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Request Header 에서 토큰 꺼내기
+        // Request Header or Cookie 에서 토큰 꺼내기
         String accessToken = resolveToken(request);
 
         if (accessToken == null) {
@@ -72,10 +73,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-
-    // Request Header 에서 토큰 정보를 꺼내오는 메서드
     private String resolveToken(HttpServletRequest request) {
+        // 우선 헤더에서 토큰을 꺼냄
         String bearer = request.getHeader(HttpHeaders.AUTHORIZATION);
-        return (bearer != null && bearer.startsWith("Bearer ")) ? bearer.substring(7) : null;
+        if (bearer != null && bearer.startsWith("Bearer ")) {
+            return bearer.substring(7);
+        }
+
+        // 헤더에 없으면 쿠키에서 토큰을 꺼냄
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("accessToken".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+
+        return null;
     }
 }
