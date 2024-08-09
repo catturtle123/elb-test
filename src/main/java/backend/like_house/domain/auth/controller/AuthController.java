@@ -7,6 +7,8 @@ import backend.like_house.global.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
@@ -50,8 +52,8 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "AUTH4001", description = "유효하지 않은 토큰입니다.")
 
     })
-    public ApiResponse<String> signOut(@RequestBody @Valid AuthDTO.TokenRequest tokenRequest) {
-        authCommandService.signOut(tokenRequest);
+    public ApiResponse<String> signOut(HttpServletRequest request, HttpServletResponse response) {
+        authCommandService.signOut(request, response);
         return ApiResponse.onSuccess("로그아웃 성공");
     }
 
@@ -61,8 +63,8 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "COMMON200", description = "OK, 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "AUTH4001", description = "유효하지 않은 토큰입니다.")
     })
-    public ApiResponse<String> deleteAccount(@RequestBody @Valid AuthDTO.TokenRequest deleteAccountRequest) {
-        authCommandService.deleteUser(deleteAccountRequest);
+    public ApiResponse<String> deleteAccount(HttpServletRequest request, HttpServletResponse response) {
+        authCommandService.deleteUser(request, response);
         return ApiResponse.onSuccess("회원 탈퇴 성공");
     }
 

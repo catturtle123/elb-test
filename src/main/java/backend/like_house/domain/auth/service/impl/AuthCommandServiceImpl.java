@@ -13,9 +13,13 @@ import backend.like_house.global.error.exception.GeneralException;
 import backend.like_house.global.error.handler.AuthException;
 import backend.like_house.global.redis.RedisUtil;
 import backend.like_house.global.security.util.JWTUtil;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,27 +78,26 @@ public class AuthCommandServiceImpl implements AuthCommandService {
     }
 
     @Override
-    public void signOut(AuthDTO.TokenRequest request) {
+    public void signOut(HttpServletRequest request, HttpServletResponse response) {
 
-        processToken(request);
+        processToken(request, response);
 
-        // 남은 Access Token 유효시간 만큼 redis에 저장
-        Long expiration = jwtUtil.getExpiration(request.getAccessToken());
-        redisTemplate.opsForValue().set(request.getAccessToken(), "logoutUser", expiration, TimeUnit.MILLISECONDS);
-
+        String accessToken = resolveToken(request);
+        Long expiration = jwtUtil.getExpiration(accessToken);
+        redisTemplate.opsForValue().set(accessToken, "logoutUser", expiration, TimeUnit.MILLISECONDS);
     }
 
     @Override
-    public void deleteUser(AuthDTO.TokenRequest request) {
+    public void deleteUser(HttpServletRequest request, HttpServletResponse response) {
 
-        processToken(request);
+        processToken(request, response);
 
-        String email = jwtUtil.extractEmail(request.getAccessToken());
-        SocialType socialType = jwtUtil.extractSocialName(request.getAccessToken());
+        String accessToken = resolveToken(request);
+        String email = jwtUtil.extractEmail(accessToken);
+        SocialType socialType = jwtUtil.extractSocialName(accessToken);
 
-        // 남은 Access Token 유효시간 만큼 redis에 저장
-        Long expiration = jwtUtil.getExpiration(request.getAccessToken());
-        redisTemplate.opsForValue().set(request.getAccessToken(), "deletedUser", expiration, TimeUnit.MILLISECONDS);
+        Long expiration = jwtUtil.getExpiration(accessToken);
+        redisTemplate.opsForValue().set(accessToken, "deletedUser", expiration, TimeUnit.MILLISECONDS);
 
         authRepository.deleteByEmailAndSocialType(email, socialType);
     }
@@ -125,21 +128,52 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         }
     }
 
-    private void processToken(AuthDTO.TokenRequest request) {
+    private void processToken(HttpServletRequest request, HttpServletResponse response) {
         // 로그아웃 or 탈퇴 처리 하고 싶은 토큰이 유효한지 확인
-        if (jwtUtil.isTokenExpired(request.getAccessToken())) {
+        String accessToken = resolveToken(request);
+        if (accessToken == null || jwtUtil.isTokenExpired(accessToken)) {
             throw new AuthException(ErrorStatus.INVALID_TOKEN);
         }
 
         // Redis에 해당 Refresh Token 이 있는지 여부를 확인 후에 있을 경우 삭제
-        String email = jwtUtil.extractEmail(request.getAccessToken());
-        SocialType socialType = jwtUtil.extractSocialName(request.getAccessToken());
+        String email = jwtUtil.extractEmail(accessToken);
+        SocialType socialType = jwtUtil.extractSocialName(accessToken);
 
         if (redisTemplate.opsForValue().get(email + ":" + socialType) != null) {
             redisTemplate.delete(email + ":" + socialType);
         }
 
+        // 쿠키 무효화
+        Cookie cookie = new Cookie("accessToken", null);
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
     }
 
+    private String resolveToken(HttpServletRequest request) {
+        String token = resolveTokenFromCookies(request);
+        if (token == null) {
+            token = resolveTokenFromHeader(request);
+        }
+        return token;
+    }
+
+    private String resolveTokenFromCookies(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("accessToken".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
+    }
+
+    private String resolveTokenFromHeader(HttpServletRequest request) {
+        String bearer = request.getHeader(HttpHeaders.AUTHORIZATION);
+        return (bearer != null && bearer.startsWith("Bearer ")) ? bearer.substring(7) : null;
+    }
 
 }
