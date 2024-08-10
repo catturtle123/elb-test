@@ -44,6 +44,8 @@ public class PostQueryServiceImpl implements PostQueryService {
 
     @Override
     public PostCursorDataListResponse getPostsByFamilySpace(Long familySpaceId, User user, Long cursor, Integer size) {
+        if (cursor == 1L) cursor = Long.MAX_VALUE;
+
         Page<Post> postPage = postRepository.findByFamilySpaceIdAndIdLessThanOrderByIdDesc(
                 familySpaceId, cursor, PageRequest.of(0, size + 1)
         );
@@ -99,6 +101,8 @@ public class PostQueryServiceImpl implements PostQueryService {
 
     @Override
     public MyPostCursorDataListResponse getMyPosts(User user, Long cursor, Integer size) {
+        if (cursor == 1L) cursor = Long.MAX_VALUE;
+
         Page<Post> postPage = postRepository.findByUserIdAndIdLessThanOrderByIdDesc(
                 user.getId(), cursor, PageRequest.of(0, size + 1)
         );
