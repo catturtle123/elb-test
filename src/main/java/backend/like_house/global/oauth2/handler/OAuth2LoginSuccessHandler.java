@@ -4,7 +4,6 @@ import backend.like_house.global.oauth2.CustomOAuth2User;
 import backend.like_house.global.redis.RedisUtil;
 import backend.like_house.global.security.util.JWTUtil;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -41,17 +40,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         redisUtil.saveRefreshToken(oAuth2User.getEmail(), oAuth2User.getSocialType(), refreshToken);
 
-        Cookie jwtCookie = new Cookie("accessToken", accessToken);
-        jwtCookie.setPath("/");
-        jwtCookie.setHttpOnly(true);
-        jwtCookie.setMaxAge(3600);
-        response.addCookie(jwtCookie);
-
-        Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
-        refreshCookie.setPath("/");
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setMaxAge(604800);
-        response.addCookie(refreshCookie);
+        jwtUtil.setCookie(response, "accessToken", accessToken, 1800); // 30분
+        jwtUtil.setCookie(response, "refreshToken", refreshToken, 604800); // 1주일
 
         response.sendRedirect("http://localhost:5173");
     }
