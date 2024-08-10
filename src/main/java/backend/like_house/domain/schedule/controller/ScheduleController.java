@@ -80,7 +80,7 @@ public class ScheduleController {
 
         반환 값 중 nextCursor = -1 일 경우 해당 스크롤이 마지막 스크롤임을 뜻합니다.
         
-        최초 요청의 cursor 값으로는 long의 최댓값인 9223372036854775807 을 주세요.
+        최초 요청의 cursor 값으로는 long의 최댓값인 9223372036854775807 을 주세요. (default 값으로 설정해 두었습니다.)
         """)
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "COMMON200", description = "OK, 성공"),
@@ -95,7 +95,7 @@ public class ScheduleController {
     public ApiResponse<ScheduleCursorDataListResponse> getScheduleByDay(
             @Parameter(hidden = true) @LoginUser @HasFamilySpaceUser User user,
             @RequestParam(name = "date") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date,
-            @RequestParam(name = "cursor") Long cursor,
+            @RequestParam(name = "cursor", defaultValue = "9223372036854775807") Long cursor,
             @RequestParam(required = false, name = "size", defaultValue = "10") @CheckSize Integer size) {
         Page<Schedule> scheduleList = scheduleQueryService.getScheduleByDay(user, date, cursor, size);
         return ApiResponse.onSuccess(ScheduleConverter.toScheduleCursorDataListResponse(scheduleList, size));
