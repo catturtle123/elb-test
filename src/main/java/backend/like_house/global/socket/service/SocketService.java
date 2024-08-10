@@ -107,8 +107,10 @@ public class SocketService {
             ChatRoom chatRoom = chatRoomRepository.findById(chattingDTO.getChatRoomId()).orElseThrow(() -> new ChatRoomException(ErrorStatus.CHATROOM_NOT_FOUND));
             User sender = userRepository.findByEmailAndSocialType(session.getAttributes().get("email").toString(), SocialType.valueOf(session.getAttributes().get("social").toString())).orElseThrow(()-> new ChatRoomException(ErrorStatus.USER_NOT_FOUND));
             User receiver = userRepository.findByEmailAndSocialType(email, socialType).orElseThrow(()-> new ChatRoomException(ErrorStatus.USER_NOT_FOUND));
-            notificationCommandService.saveNotification(sender, receiver, chatRoom.getTitle(), chattingDTO.getContent(), NotificationType.CHAT);
-            fcmService.sendNotification(receiver.getFcmToken(), chatRoom.getTitle(), chattingDTO.getContent());
+            if (receiver.getChatAlarm()) {
+                notificationCommandService.saveNotification(sender, receiver, chatRoom.getTitle(), chattingDTO.getContent(), NotificationType.CHAT);
+                fcmService.sendNotification(receiver.getFcmToken(), chatRoom.getTitle(), chattingDTO.getContent());
+            }
         });
 
         log.info("ChatSessionRoom 현황 : " + TextHandler.chatSessionRoom);
