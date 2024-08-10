@@ -12,7 +12,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -39,20 +38,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (accessToken == null) {
-            handleNoAccessToken(response, refreshToken);
+        if (accessToken != null) {
+            try {
+                handleAccessToken(request, response, accessToken, refreshToken);
+            } catch (JwtException | IllegalArgumentException e) {
+                throw new AuthException(ErrorStatus.INVALID_TOKEN);
+            }
         } else {
-            handleAccessToken(request, response, accessToken, refreshToken);
+            handleNoAccessToken(response, refreshToken);
         }
 
         filterChain.doFilter(request, response);
     }
 
     private void handleNoAccessToken(HttpServletResponse response, String refreshToken) throws IOException {
-        if (refreshToken != null) {
+        if (refreshToken != null && jwtUtil.isRefreshTokenValid(refreshToken)) {
             try {
                 String newAccessToken = jwtUtil.renewAccessToken(refreshToken);
-                setCookie(response, "accessToken", newAccessToken, 600);
+                jwtUtil.setCookie(response, "accessToken", newAccessToken, 1800);
 
                 String email = jwtUtil.extractEmail(newAccessToken);
                 SocialType socialType = jwtUtil.extractSocialName(newAccessToken);
@@ -102,18 +105,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private String resolveToken(HttpServletRequest request) {
-        // 헤더에서 액세스 토큰을 꺼냄
-        String bearer = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (bearer != null && bearer.startsWith("Bearer ")) {
-            return bearer.substring(7);
-        }
-
-        // 쿠키에서 액세스 토큰을 꺼냄
         return getCookieValue(request, "accessToken");
     }
 
     private String resolveRefreshToken(HttpServletRequest request) {
-        // 쿠키에서 리프레시 토큰을 꺼냄
         return getCookieValue(request, "refreshToken");
     }
 
@@ -126,14 +121,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         return null;
-    }
-
-    private void setCookie(HttpServletResponse response, String name, String value, int maxAge) {
-        Cookie cookie = new Cookie(name, value);
-        cookie.setPath("/");
-        cookie.setHttpOnly(true);
-        cookie.setMaxAge(maxAge);
-        response.addCookie(cookie);
     }
 
     private void validateAndSetAuthentication(String token, String email, SocialType socialType) {

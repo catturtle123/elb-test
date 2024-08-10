@@ -41,8 +41,9 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "AUTH4002", description = "비밀번호가 일치하지 않습니다.")
 
     })
-    public ApiResponse<AuthDTO.SignInResponse> signIn(@RequestBody @Valid AuthDTO.SignInRequest signInDTO) {
-        return ApiResponse.onSuccess(authCommandService.signIn(signInDTO));
+    public ApiResponse<String> signIn(HttpServletResponse response, @RequestBody @Valid AuthDTO.SignInRequest signInDTO) {
+        authCommandService.signIn(response, signInDTO);
+        return ApiResponse.onSuccess("로그인 성공");
     }
 
     @PostMapping("/signout")
