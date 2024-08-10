@@ -27,6 +27,8 @@ spring:
       - redis
       - s3
       - oauth
+      - discord
+      - email
   data:
     redis:
       repositories:

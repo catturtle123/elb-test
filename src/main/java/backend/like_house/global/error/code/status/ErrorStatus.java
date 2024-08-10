@@ -23,6 +23,10 @@ public enum ErrorStatus implements BaseErrorCode {
     ALREADY_BELONG_USER_FAMILY_SPACE(HttpStatus.BAD_REQUEST, "FAMILY_SPACE4004", "이미 가족 공간에 소속되어 있습니다."),
     FAMILY_SPACE_CODE_EXPIRATION_INVALID(HttpStatus.BAD_REQUEST, "FAMILY_SPACE4005", "초대 코드가 유효하지 않습니다."),
     ALREADY_BELONG_OTHER_FAMILY_SPACE(HttpStatus.BAD_REQUEST, "FAMILY_SPACE4006", "이미 다른 가족 공간에 속해 있습니다."),
+    INVALID_FAMILY_SPACE_CODE_PATTERN(HttpStatus.BAD_REQUEST, "FAMILY_SPACE4007", "코드의 길이는 8~12글자이고, 대소문자와 알파벳으로 이루어져야 합니다."),
+
+    // 가족 정보 관련 에러
+    AT_LEAST_ONE_NOT_NULL_FAMILY_DATA(HttpStatus.BAD_REQUEST, "FAMILY_DATA4001", "별명 또는 메모 중 최소 하나는 필요합니다."),
 
     // 유저 관련 에러
     USER_NOT_FOUND(HttpStatus.BAD_REQUEST, "USER4001", "사용자를 찾을 수 없습니다."),
@@ -31,13 +35,16 @@ public enum ErrorStatus implements BaseErrorCode {
     ALREADY_BLOCKED_USER(HttpStatus.BAD_REQUEST, "USER4006", "이미 차단된 유저입니다."),
     ALREADY_RELEASE_BLOCK_USER(HttpStatus.BAD_REQUEST, "USER4008", "이미 차단이 풀어진 유저입니다."),
     PASSWORD_SAME_AS_OLD(HttpStatus.BAD_REQUEST, "USER4009", "기존 비밀번호와 동일합니다."),
+    CANNOT_BLOCK_YOURSELF(HttpStatus.BAD_REQUEST, "USER4010", "자기 자신을 차단할 수 없습니다."),
+    CANNOT_RELEASE_BLOCK_YOURSELF(HttpStatus.BAD_REQUEST, "USER4011", "자기 자신을 차단 해제할 수 없습니다."),
 
     // 인증 관련 에러
-    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH4001", "유효하지 않은 토큰입니다."),
+    INVALID_TOKEN(HttpStatus.BAD_REQUEST, "AUTH4001", "유효하지 않은 토큰입니다."),
     WRONG_PASSWORD(HttpStatus.BAD_REQUEST, "AUTH4002", "비밀번호가 일치하지 않습니다."),
     INVALID_ACCESS(HttpStatus.FORBIDDEN, "AUTH4003", "접근 권한이 없습니다."),
     LOGOUT_USER_TOKEN(HttpStatus.BAD_REQUEST, "AUTH4004", "로그아웃 처리된 토큰입니다."),
     DELETE_USER_TOKEN(HttpStatus.BAD_REQUEST, "AUTH4005", "탈퇴 처리된 토큰입니다."),
+    EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH4006", "만료된 토큰입니다."),
 
     // 일정 관련 에러
     SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SCHEDULE4001", "존재하지 않는 일정 입니다."),
@@ -95,6 +102,11 @@ public enum ErrorStatus implements BaseErrorCode {
     // token 관련 에러
     TOKEN_NOT_SEND(HttpStatus.BAD_REQUEST, "TOKEN4001", "토큰이 보내지지 않았습니다.."),
     TOKEN_NOT_VALID(HttpStatus.BAD_REQUEST, "TOKEN4002", "유효하지 않은 토큰입니다."),
+
+    // 이메일 인증 관련
+    EMAIL_SEND_FAIL(HttpStatus.BAD_REQUEST, "EMAIL4001", "이메일 전송을 실패하였습니다."),
+    EMAIL_CODE_NOT_FOUND(HttpStatus.NOT_FOUND, "EMAIL4002", "인증번호를 찾을 수 없습니다."),
+    INCORRECT_EMAIL_CODE(HttpStatus.BAD_REQUEST, "EMAIL4003", "인증번호가 일치하지 않습니다."),
 
     // 예시,,,
     ARTICLE_NOT_FOUND(HttpStatus.NOT_FOUND, "ARTICLE4001", "게시글이 없습니다.");

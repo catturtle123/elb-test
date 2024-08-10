@@ -1,7 +1,7 @@
 package backend.like_house.global.redis;
 
 import backend.like_house.global.error.code.status.ErrorStatus;
-import backend.like_house.global.error.exception.GeneralException;
+import backend.like_house.global.error.handler.FamilySpaceException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import backend.like_house.domain.user.entity.SocialType;
@@ -31,10 +31,14 @@ public class RedisUtil {
         redisTemplate.opsForValue().set(code, String.valueOf(familySpaceId), 7, TimeUnit.DAYS);
     }
 
+    public void saveEmailCode(String receiver, String code) {
+        redisTemplate.opsForValue().set(receiver, code, 5, TimeUnit.MINUTES);
+    }
+
     public LocalDateTime getFamilySpaceCodeExpirationByCode(String code) {
         Long expiration = redisTemplate.getExpire(code, TimeUnit.SECONDS);
         if (expiration == null || expiration <= 0) {
-            throw new GeneralException(ErrorStatus.FAMILY_SPACE_CODE_EXPIRATION_INVALID);
+            throw new FamilySpaceException(ErrorStatus.FAMILY_SPACE_CODE_EXPIRATION_INVALID);
         } else {
             return LocalDateTime.now().plusSeconds(expiration);
         }
@@ -43,7 +47,7 @@ public class RedisUtil {
     public Long getFamilySpaceIdByCode(String code) {
         String familySpaceId = redisTemplate.opsForValue().get(code);
         if (familySpaceId == null) {
-            throw new GeneralException(ErrorStatus.FAMILY_SPACE_CODE_EXPIRATION_INVALID);
+            throw new FamilySpaceException(ErrorStatus.FAMILY_SPACE_CODE_EXPIRATION_INVALID);
         } else {
             return Long.parseLong(familySpaceId);
         }
@@ -57,6 +61,10 @@ public class RedisUtil {
         }
 
         return code;
+    }
+
+    public String getEmailVerificationCode(String email) {
+        return redisTemplate.opsForValue().get(email);
     }
 
     public String generateFamilySpaceCodeById(Long familySpaceId) {
@@ -113,5 +121,9 @@ public class RedisUtil {
     // email과 socialType으로 키 생성
     private String generateKey(String email, String socialType) {
         return email + ":" + socialType;
+    }
+
+    public void deleteEmailVerificationCode(String email) {
+        redisTemplate.delete(email);
     }
 }

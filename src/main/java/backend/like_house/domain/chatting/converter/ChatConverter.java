@@ -8,6 +8,7 @@ import backend.like_house.domain.user.entity.User;
 import backend.like_house.global.socket.dto.ChattingDTO.MessageDTO;
 import org.springframework.data.domain.Slice;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,6 +29,8 @@ public class ChatConverter {
                 .map(ChatConverter::toChatResponse)
                 .collect(Collectors.toList());
 
+        Collections.reverse(chatResponses);
+
         return ChatDTO.ChatListResponse.builder()
                 .hasNext(chatSlice.hasNext())
                 .chatResponseList(chatResponses)
@@ -41,6 +44,7 @@ public class ChatConverter {
         ChatDTO.SenderDTO senderDTO = ChatDTO.SenderDTO.builder()
                 .senderId(user == null ? null : user.getId())
                 .senderName(user == null ? "알 수 없음" : user.getName())
+                .senderProfile(user == null ? null : user.getProfileImage())
                 .build();
 
         return ChatDTO.ChatResponse.builder()
