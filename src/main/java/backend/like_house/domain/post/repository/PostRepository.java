@@ -2,6 +2,7 @@ package backend.like_house.domain.post.repository;
 
 import backend.like_house.domain.post.entity.Post;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -11,10 +12,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
-    @Query("SELECT p FROM Post p WHERE p.familySpace.id = :familySpaceId " +
-            "ORDER BY p.id DESC")
-    List<Post> findPostsByFamilySpaceId(@Param("familySpaceId") Long familySpaceId,
-                                        Pageable pageable);
+    Page<Post> findByFamilySpaceIdAndIdLessThanOrderByIdDesc(Long familySpaceId, Long id, PageRequest pageRequest);
 
     Page<Post> findByUserIdAndIdLessThanOrderByIdDesc(Long userId, Long id, Pageable pageable);
 

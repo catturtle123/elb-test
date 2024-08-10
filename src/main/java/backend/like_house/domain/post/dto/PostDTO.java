@@ -110,5 +110,14 @@ public class PostDTO {
             private List<GetMyPostListResponse> posts; // 게시글 목록
             private Long nextCursor; // 다음 커서 값 (마지막이면 -1 반환)
         }
+
+        @Builder
+        @Getter
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class PostCursorDataListResponse {
+            private List<GetPostListResponse> posts;
+            private Long nextCursor;
+        }
     }
 }
