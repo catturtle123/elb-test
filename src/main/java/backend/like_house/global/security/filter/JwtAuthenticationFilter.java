@@ -31,19 +31,46 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Request Header or Cookie 에서 토큰 꺼내기
         String accessToken = resolveToken(request);
+        String refreshToken = resolveRefreshToken(request);
 
-        if (accessToken == null) {
+        if (accessToken == null && refreshToken == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        try {
-            // Redis에 해당 accessToken blacklist 여부를 확인
-            String blacklist = redisTemplate.opsForValue().get(accessToken);
+        if (accessToken == null) {
+            handleNoAccessToken(response, refreshToken);
+        } else {
+            handleAccessToken(request, response, accessToken, refreshToken);
+        }
 
-            // 로그아웃 or 탈퇴가 되어 있지 않다면 정상 진행
+        filterChain.doFilter(request, response);
+    }
+
+    private void handleNoAccessToken(HttpServletResponse response, String refreshToken) throws IOException {
+        if (refreshToken != null) {
+            try {
+                String newAccessToken = jwtUtil.renewAccessToken(refreshToken);
+                setCookie(response, "accessToken", newAccessToken, 600);
+
+                String email = jwtUtil.extractEmail(newAccessToken);
+                SocialType socialType = jwtUtil.extractSocialName(newAccessToken);
+
+                validateAndSetAuthentication(newAccessToken, email, socialType);
+
+            } catch (JwtException | IllegalArgumentException e) {
+                throw new AuthException(ErrorStatus.INVALID_TOKEN);
+            }
+        } else {
+            throw new AuthException(ErrorStatus._UNAUTHORIZED);
+        }
+    }
+
+    private void handleAccessToken(HttpServletRequest request, HttpServletResponse response, String accessToken, String refreshToken) throws IOException {
+        try {
+            // 블랙리스트 확인
+            String blacklist = redisTemplate.opsForValue().get(accessToken);
             if (blacklist != null) {
                 if ("logoutUser".equals(blacklist)) {
                     throw new AuthException(ErrorStatus.LOGOUT_USER_TOKEN);
@@ -52,42 +79,69 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
 
-            // 토큰이 만료되었는지 확인
+            // 액세스 토큰이 만료되었는지 확인
             if (jwtUtil.isTokenExpired(accessToken)) {
-                throw new AuthException(ErrorStatus.EXPIRED_TOKEN);
-            }
-
-            String email = jwtUtil.extractEmail(accessToken);
-            SocialType socialType = jwtUtil.extractSocialName(accessToken);
-
-            // JWT 검증 성공 시 인증 객체 생성
-            if (email != null && socialType != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                Authentication authentication = jwtUtil.getAuthentication(email, socialType);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                if (refreshToken != null) {
+                    handleNoAccessToken(response, refreshToken);
+                } else {
+                    throw new AuthException(ErrorStatus.EXPIRED_TOKEN);
+                }
+            } else {
+                // 액세스 토큰이 유효한 경우 인증 객체 설정
+                String email = jwtUtil.extractEmail(accessToken);
+                SocialType socialType = jwtUtil.extractSocialName(accessToken);
+                if (email != null && socialType != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    Authentication authentication = jwtUtil.getAuthentication(email, socialType);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             }
 
         } catch (JwtException | IllegalArgumentException e) {
             throw new AuthException(ErrorStatus.INVALID_TOKEN);
         }
-        filterChain.doFilter(request, response);
     }
 
     private String resolveToken(HttpServletRequest request) {
-        // 우선 헤더에서 토큰을 꺼냄
+        // 헤더에서 액세스 토큰을 꺼냄
         String bearer = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (bearer != null && bearer.startsWith("Bearer ")) {
             return bearer.substring(7);
         }
 
-        // 헤더에 없으면 쿠키에서 토큰을 꺼냄
+        // 쿠키에서 액세스 토큰을 꺼냄
+        return getCookieValue(request, "accessToken");
+    }
+
+    private String resolveRefreshToken(HttpServletRequest request) {
+        // 쿠키에서 리프레시 토큰을 꺼냄
+        return getCookieValue(request, "refreshToken");
+    }
+
+    private String getCookieValue(HttpServletRequest request, String cookieName) {
         if (request.getCookies() != null) {
             for (Cookie cookie : request.getCookies()) {
-                if ("accessToken".equals(cookie.getName())) {
+                if (cookieName.equals(cookie.getName())) {
                     return cookie.getValue();
                 }
             }
         }
-
         return null;
+    }
+
+    private void setCookie(HttpServletResponse response, String name, String value, int maxAge) {
+        Cookie cookie = new Cookie(name, value);
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        cookie.setMaxAge(maxAge);
+        response.addCookie(cookie);
+    }
+
+    private void validateAndSetAuthentication(String token, String email, SocialType socialType) {
+        String blacklist = redisTemplate.opsForValue().get(token);
+        if (blacklist != null) {
+            throw new AuthException("logoutUser".equals(blacklist) ? ErrorStatus.LOGOUT_USER_TOKEN : ErrorStatus.DELETE_USER_TOKEN);
+        }
+        Authentication authentication = jwtUtil.getAuthentication(email, socialType);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 }

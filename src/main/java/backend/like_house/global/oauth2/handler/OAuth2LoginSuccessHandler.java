@@ -1,6 +1,5 @@
 package backend.like_house.global.oauth2.handler;
 
-import backend.like_house.domain.user.entity.Role;
 import backend.like_house.global.oauth2.CustomOAuth2User;
 import backend.like_house.global.redis.RedisUtil;
 import backend.like_house.global.security.util.JWTUtil;
@@ -47,6 +46,12 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         jwtCookie.setHttpOnly(true);
         jwtCookie.setMaxAge(3600);
         response.addCookie(jwtCookie);
+
+        Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
+        refreshCookie.setPath("/");
+        refreshCookie.setHttpOnly(true);
+        refreshCookie.setMaxAge(604800);
+        response.addCookie(refreshCookie);
 
         response.sendRedirect("http://localhost:5173");
     }
