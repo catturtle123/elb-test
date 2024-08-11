@@ -43,17 +43,16 @@ public class PostController {
     })
     @Parameters({
             @Parameter(name = "familySpaceId", description = "가족 공간의 ID, path variable 입니다."),
-            @Parameter(name = "page", description = "페이지 번호, 1번이 1 페이지 입니다. query string 입니다."),
-            @Parameter(name = "size", description = "가져올 게시글의 개수입니다. 1이상의 값으로 주세요. query string 입니다.")
+            @Parameter(name = "cursor", description = "커서, 마지막으로 받은 게시글의 ID입니다. query string 입니다."),
+            @Parameter(name = "size", description = "가져올 게시글의 개수입니다. 1 이상의 값으로 주세요. query string 입니다.")
     })
-    public ApiResponse<List<GetPostListResponse>> getPostsByFamilySpace(
+    public ApiResponse<PostCursorDataListResponse> getPostsByFamilySpace(
             @PathVariable Long familySpaceId,
             @Parameter(hidden = true) @LoginUser User user,
-            @RequestParam(required = false, name = "page", defaultValue = "1") @CheckPage Integer page,
+            @RequestParam(name = "cursor", defaultValue = "9223372036854775807") Long cursor,
             @RequestParam(required = false, name = "size", defaultValue = "10") @CheckSize Integer size
     ) {
-        Integer validatedPage = checkPageValidator.validateAndTransformPage(page);
-        List<GetPostListResponse> response = postQueryService.getPostsByFamilySpace(familySpaceId, user, validatedPage, size);
+        PostCursorDataListResponse response = postQueryService.getPostsByFamilySpace(familySpaceId, user, cursor, size);
         return ApiResponse.onSuccess(response);
     }
 

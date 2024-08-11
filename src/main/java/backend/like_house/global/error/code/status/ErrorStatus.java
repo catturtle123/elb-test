@@ -47,7 +47,8 @@ public enum ErrorStatus implements BaseErrorCode {
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH4006", "만료된 토큰입니다."),
 
     // 일정 관련 에러
-    SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SCHEDULE4001", "존재하지 않는 일정 입니다."),
+    SCHEDULE_NOT_FOUND(HttpStatus.BAD_REQUEST, "SCHEDULE4001", "존재하지 않는 일정 입니다."),
+    INVALID_SCHEDULE_TYPE(HttpStatus.BAD_REQUEST, "SCHEDULE4002", "존재하지 않는 일정 유형입니다."),
 
     // 가족 이모티콘 관련 에러
     FAMILY_EMOTICON_NOT_FOUND(HttpStatus.NOT_FOUND, "FAMILY_EMOTICON4001", "존재하지 않는 가족 이모티콘 입니다."),

@@ -14,9 +14,13 @@ import backend.like_house.global.error.handler.AuthException;
 import backend.like_house.global.firebase.service.FCMQueryService;
 import backend.like_house.global.redis.RedisUtil;
 import backend.like_house.global.security.util.JWTUtil;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,7 +61,7 @@ public class AuthCommandServiceImpl implements AuthCommandService {
     }
 
     @Override
-    public AuthDTO.SignInResponse signIn(AuthDTO.SignInRequest signInRequest) {
+    public void signIn(HttpServletResponse response, AuthDTO.SignInRequest signInRequest) {
         // 일반 로그인 - 이메일로 사용자 조회
         User user = authRepository.findByEmailAndSocialType(signInRequest.getEmail(), SocialType.LOCAL)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
@@ -73,36 +77,37 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         // Redis에 RefreshToken 저장
         redisUtil.saveRefreshToken(user.getEmail(), user.getSocialType(), refreshToken);
 
-        return AuthConverter.toSignInResponseDTO(accessToken, refreshToken);
+        jwtUtil.setCookie(response, "accessToken", accessToken, 1800); // 30분
+        jwtUtil.setCookie(response, "refreshToken", refreshToken, 604800); // 1주일
     }
 
     @Override
-    public void signOut(AuthDTO.TokenRequest request) {
+    public void signOut(HttpServletRequest request, HttpServletResponse response) {
 
-        processToken(request);
+        processToken(request, response);
 
-        // 남은 Access Token 유효시간 만큼 redis에 저장
-        Long expiration = jwtUtil.getExpiration(request.getAccessToken());
-        redisTemplate.opsForValue().set(request.getAccessToken(), "logoutUser", expiration, TimeUnit.MILLISECONDS);
+        String accessToken = resolveToken(request);
+        Long expiration = jwtUtil.getExpiration(accessToken);
+        redisTemplate.opsForValue().set(accessToken, "logoutUser", expiration, TimeUnit.MILLISECONDS);
 
-        String email = jwtUtil.extractEmail(request.getAccessToken());
-        SocialType socialType = jwtUtil.extractSocialName(request.getAccessToken());
+        String email = jwtUtil.extractEmail(accessToken);
+        SocialType socialType = jwtUtil.extractSocialName(accessToken);
 
         Optional<User> optionalUser = authRepository.findByEmailAndSocialType(email, socialType);
         optionalUser.ifPresent(user -> authRepository.updateFcmTokenById(user.getId(), null));
     }
 
     @Override
-    public void deleteUser(AuthDTO.TokenRequest request) {
+    public void deleteUser(HttpServletRequest request, HttpServletResponse response) {
 
-        processToken(request);
+        processToken(request, response);
 
-        String email = jwtUtil.extractEmail(request.getAccessToken());
-        SocialType socialType = jwtUtil.extractSocialName(request.getAccessToken());
+        String accessToken = resolveToken(request);
+        String email = jwtUtil.extractEmail(accessToken);
+        SocialType socialType = jwtUtil.extractSocialName(accessToken);
 
-        // 남은 Access Token 유효시간 만큼 redis에 저장
-        Long expiration = jwtUtil.getExpiration(request.getAccessToken());
-        redisTemplate.opsForValue().set(request.getAccessToken(), "deletedUser", expiration, TimeUnit.MILLISECONDS);
+        Long expiration = jwtUtil.getExpiration(accessToken);
+        redisTemplate.opsForValue().set(accessToken, "deletedUser", expiration, TimeUnit.MILLISECONDS);
 
         authRepository.deleteByEmailAndSocialType(email, socialType);
     }
@@ -139,20 +144,53 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         }
     }
 
-    private void processToken(AuthDTO.TokenRequest request) {
+    private void processToken(HttpServletRequest request, HttpServletResponse response) {
         // 로그아웃 or 탈퇴 처리 하고 싶은 토큰이 유효한지 확인
-        if (jwtUtil.isTokenExpired(request.getAccessToken())) {
+        String accessToken = resolveToken(request);
+        if (accessToken == null || jwtUtil.isTokenExpired(accessToken)) {
             throw new AuthException(ErrorStatus.INVALID_TOKEN);
         }
 
         // Redis에 해당 Refresh Token 이 있는지 여부를 확인 후에 있을 경우 삭제
-        String email = jwtUtil.extractEmail(request.getAccessToken());
-        SocialType socialType = jwtUtil.extractSocialName(request.getAccessToken());
+        String email = jwtUtil.extractEmail(accessToken);
+        SocialType socialType = jwtUtil.extractSocialName(accessToken);
 
         if (redisTemplate.opsForValue().get(email + ":" + socialType) != null) {
             redisTemplate.delete(email + ":" + socialType);
         }
 
+        // 쿠키 무효화
+        Cookie cookie = new Cookie("accessToken", null);
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
+
+        Cookie refreshTokenCookie = new Cookie("refreshToken", null);
+        refreshTokenCookie.setPath("/");
+        refreshTokenCookie.setHttpOnly(true);
+        refreshTokenCookie.setMaxAge(0);
+        response.addCookie(refreshTokenCookie);
+    }
+
+    private String resolveToken(HttpServletRequest request) {
+        String token = resolveTokenFromCookies(request);
+        if (token == null) {
+            token = resolveTokenFromHeader(request);
+        }
+        return token;
+    }
+
+    private String resolveTokenFromCookies(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("accessToken".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
     }
 
     @Override
@@ -161,5 +199,9 @@ public class AuthCommandServiceImpl implements AuthCommandService {
     }
 
 
+    private String resolveTokenFromHeader(HttpServletRequest request) {
+        String bearer = request.getHeader(HttpHeaders.AUTHORIZATION);
+        return (bearer != null && bearer.startsWith("Bearer ")) ? bearer.substring(7) : null;
+    }
 
 }

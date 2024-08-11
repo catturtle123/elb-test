@@ -43,20 +43,34 @@ public class PostQueryServiceImpl implements PostQueryService {
     private final ScheduleRepository scheduleRepository;
 
     @Override
-    public List<GetPostListResponse> getPostsByFamilySpace(Long familySpaceId, User user, Integer page, Integer size) {
-        List<Post> posts = postRepository.findPostsByFamilySpaceId(familySpaceId, PageRequest.of(page, size));
-        List<LocalDate> scheduledDates = scheduleRepository.findDatesWithSchedules(familySpaceId, LocalDate.now().getMonthValue());
+    public PostCursorDataListResponse getPostsByFamilySpace(Long familySpaceId, User user, Long cursor, Integer size) {
+        if (cursor == 1L) cursor = Long.MAX_VALUE;
 
-        return posts.stream().map(post -> {
-            String authorNickname = getAuthorNickname(user, post.getUser());
-            String profileImage = post.getUser().getProfileImage();
-            int likeCount = postLikeRepository.countByPostId(post.getId());
-            int commentCount = commentRepository.countByPostId(post.getId());
-            List<String> imageUrls = postImageRepository.findByPostId(post.getId())
-                    .stream().map(PostImage::getFilename).collect(Collectors.toList());
-            boolean owner = post.getUser().getId().equals(user.getId());
-            return PostConverter.toGetPostListResponse(post, authorNickname, profileImage, likeCount, commentCount, imageUrls, owner, scheduledDates);
-        }).collect(Collectors.toList());
+        Page<Post> postPage = postRepository.findByFamilySpaceIdAndIdLessThanOrderByIdDesc(
+                familySpaceId, cursor, PageRequest.of(0, size + 1)
+        );
+
+        List<Post> posts = postPage.getContent();
+
+        List<GetPostListResponse> postResponses = posts.stream()
+                .limit(size)
+                .map(post -> {
+                    String authorNickname = getAuthorNickname(user, post.getUser());
+                    String profileImage = post.getUser().getProfileImage();
+                    int likeCount = postLikeRepository.countByPostId(post.getId());
+                    int commentCount = commentRepository.countByPostId(post.getId());
+                    List<String> imageUrls = postImageRepository.findByPostId(post.getId())
+                            .stream().map(PostImage::getFilename)
+                            .collect(Collectors.toList());
+                    boolean owner = post.getUser().getId().equals(user.getId());
+                    List<LocalDate> scheduledDates = scheduleRepository.findDatesWithSchedules(familySpaceId, LocalDate.now().getMonthValue());
+                    return PostConverter.toGetPostListResponse(post, authorNickname, profileImage, likeCount, commentCount, imageUrls, owner, scheduledDates);
+                })
+                .collect(Collectors.toList());
+
+        Long nextCursor = posts.size() > size ? posts.get(size - 1).getId() : -1L;
+
+        return PostConverter.toPostCursorDataListResponse(postResponses, nextCursor);
     }
 
     @Override
@@ -87,6 +101,8 @@ public class PostQueryServiceImpl implements PostQueryService {
 
     @Override
     public MyPostCursorDataListResponse getMyPosts(User user, Long cursor, Integer size) {
+        if (cursor == 1L) cursor = Long.MAX_VALUE;
+
         Page<Post> postPage = postRepository.findByUserIdAndIdLessThanOrderByIdDesc(
                 user.getId(), cursor, PageRequest.of(0, size + 1)
         );

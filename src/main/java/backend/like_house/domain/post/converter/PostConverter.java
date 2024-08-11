@@ -101,4 +101,11 @@ public class PostConverter {
                 .nextCursor(nextCursor)
                 .build();
     }
+
+    public static PostCursorDataListResponse toPostCursorDataListResponse(List<GetPostListResponse> postResponses, Long nextCursor) {
+        return PostCursorDataListResponse.builder()
+                .posts(postResponses)
+                .nextCursor(nextCursor)
+                .build();
+    }
 }
