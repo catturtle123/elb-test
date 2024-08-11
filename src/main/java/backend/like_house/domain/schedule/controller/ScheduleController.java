@@ -80,7 +80,7 @@ public class ScheduleController {
 
         반환 값 중 nextCursor = -1 일 경우 해당 스크롤이 마지막 스크롤임을 뜻합니다.
         
-        최초 요청의 cursor 값으로는 long의 최댓값인 9223372036854775807 을 주세요. (default 값으로 설정해 두었습니다.)
+        최초 요청의 cursor 값은 1로 해주세요.
         """)
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "COMMON200", description = "OK, 성공"),
@@ -89,13 +89,13 @@ public class ScheduleController {
     })
     @Parameters({
             @Parameter(name = "date", description = "날짜, yyyy-MM-dd 형식입니다. query string 입니다."),
-            @Parameter(name = "cursor", description = "커서, 마지막으로 받은 일정의 ID입니다. query string 입니다."),
+            @Parameter(name = "cursor", description = "커서, 마지막으로 받은 일정의 ID입니다. 최초 요청 값은 1입니다. query string 입니다."),
             @Parameter(name = "size", description = "가져올 일정의 개수입니다. 1이상의 값으로 주세요. query string 입니다."),
     })
     public ApiResponse<ScheduleCursorDataListResponse> getScheduleByDay(
             @Parameter(hidden = true) @LoginUser @HasFamilySpaceUser User user,
             @RequestParam(name = "date") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date,
-            @RequestParam(name = "cursor", defaultValue = "9223372036854775807") Long cursor,
+            @RequestParam(name = "cursor") Long cursor,
             @RequestParam(required = false, name = "size", defaultValue = "10") @CheckSize Integer size) {
         Page<Schedule> scheduleList = scheduleQueryService.getScheduleByDay(user, date, cursor, size);
         return ApiResponse.onSuccess(ScheduleConverter.toScheduleCursorDataListResponse(scheduleList, size));
@@ -124,7 +124,8 @@ public class ScheduleController {
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "COMMON200", description = "OK, 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "FAMILY_SPACE4003", description = "유저가 해당 가족 공간에 속해 있지 않습니다."),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "SCHEDULE4001", description = "존재하지 않는 일정 입니다.")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "SCHEDULE4001", description = "존재하지 않는 일정 입니다."),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "SCHEDULE4002", description = "존재하지 않는 일정 유형입니다.")
     })
     @Parameters({
             @Parameter(name = "scheduleId", description = "일정 아이디, path variable 입니다.")
@@ -132,16 +133,21 @@ public class ScheduleController {
     public ApiResponse<SaveScheduleResponse> updateSchedule(
             @Parameter(hidden = true) @LoginUser @HasFamilySpaceUser User user,
             @PathVariable(name = "scheduleId") @ExistSchedule Long scheduleId,
-            @RequestBody @Valid ModifyScheduleRequest request) {
+            @RequestBody ModifyScheduleRequest request) {
         Schedule schedule = scheduleCommandService.updateSchedule(scheduleId, request);
         return ApiResponse.onSuccess(ScheduleConverter.toSaveScheduleResponse(schedule));
     }
 
     @PostMapping("")
-    @Operation(summary = "일정 저장 API", description = "새로운 일정을 저장하는 API입니다.")
+    @Operation(summary = "일정 저장 API", description = """
+        새로운 일정을 저장하는 API입니다.
+        
+        저장할 일정 유형으로는 "생일", "가족 행사", "개인 일정", "기일" 중 하나로 주세요.
+        """)
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "COMMON200", description = "OK, 성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "FAMILY_SPACE4003", description = "유저가 해당 가족 공간에 속해 있지 않습니다.")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "FAMILY_SPACE4003", description = "유저가 해당 가족 공간에 속해 있지 않습니다."),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "SCHEDULE4002", description = "존재하지 않는 일정 유형입니다.")
     })
     public ApiResponse<SaveScheduleResponse> saveSchedule(
             @Parameter(hidden = true) @LoginUser @HasFamilySpaceUser User user,
