@@ -82,4 +82,11 @@ public class AuthDTO {
         private Long userId;
     }
 
+    @Getter
+    public static class FcmRequest {
+        @NotNull
+        @Schema(description = "토큰")
+        private String fcmToken;
+    }
+
 }
