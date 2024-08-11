@@ -11,6 +11,7 @@ import backend.like_house.global.email.EmailUtil;
 import backend.like_house.global.error.code.status.ErrorStatus;
 import backend.like_house.global.error.exception.GeneralException;
 import backend.like_house.global.error.handler.AuthException;
+import backend.like_house.global.firebase.service.FCMQueryService;
 import backend.like_house.global.redis.RedisUtil;
 import backend.like_house.global.security.util.JWTUtil;
 import jakarta.servlet.http.Cookie;
@@ -24,6 +25,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -38,6 +40,7 @@ public class AuthCommandServiceImpl implements AuthCommandService {
     private final RedisUtil redisUtil;
     private final RedisTemplate<String, String> redisTemplate;
     private final EmailUtil emailUtil;
+    private final FCMQueryService fcmQueryService;
 
     @Override
     public AuthDTO.SignUpResponse signUp(AuthDTO.SignUpRequest signUpRequest) {
@@ -86,6 +89,12 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         String accessToken = resolveToken(request);
         Long expiration = jwtUtil.getExpiration(accessToken);
         redisTemplate.opsForValue().set(accessToken, "logoutUser", expiration, TimeUnit.MILLISECONDS);
+
+        String email = jwtUtil.extractEmail(accessToken);
+        SocialType socialType = jwtUtil.extractSocialName(accessToken);
+
+        Optional<User> optionalUser = authRepository.findByEmailAndSocialType(email, socialType);
+        optionalUser.ifPresent(user -> authRepository.updateFcmTokenById(user.getId(), null));
     }
 
     @Override
@@ -101,6 +110,12 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         redisTemplate.opsForValue().set(accessToken, "deletedUser", expiration, TimeUnit.MILLISECONDS);
 
         authRepository.deleteByEmailAndSocialType(email, socialType);
+    }
+
+    @Override
+    public void fcmSave(User user, AuthDTO.FcmRequest tokenRequest) {
+        fcmQueryService.isTokenValid(user.getName(), tokenRequest.getFcmToken());
+        user.addFcmToken(tokenRequest.getFcmToken());
     }
 
     @Override
@@ -177,6 +192,12 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         }
         return null;
     }
+
+    @Override
+    public void fcmSignOut(User user) {
+        authRepository.updateFcmTokenById(user.getId(), null);
+    }
+
 
     private String resolveTokenFromHeader(HttpServletRequest request) {
         String bearer = request.getHeader(HttpHeaders.AUTHORIZATION);

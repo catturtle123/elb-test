@@ -1,6 +1,7 @@
 package backend.like_house.domain.auth.service;
 
 import backend.like_house.domain.auth.dto.AuthDTO;
+import backend.like_house.domain.user.entity.User;
 import backend.like_house.domain.auth.dto.EmailDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,4 +20,7 @@ public interface AuthCommandService {
 
     void verifyCode(EmailDTO.EmailVerificationRequest request);
 
+    void fcmSave(User user, AuthDTO.FcmRequest tokenRequest);
+
+    void fcmSignOut(User user);
 }

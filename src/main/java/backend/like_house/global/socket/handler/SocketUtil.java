@@ -5,6 +5,7 @@ import backend.like_house.domain.chatting.dto.ChatDTO;
 import backend.like_house.domain.user.entity.SocialType;
 import backend.like_house.global.error.code.status.ErrorStatus;
 import backend.like_house.global.error.handler.ChatException;
+import backend.like_house.global.socket.dto.ChattingDTO;
 import backend.like_house.global.socket.dto.ChattingDTO.MessageDTO;
 import com.querydsl.core.Tuple;
 import org.springframework.stereotype.Component;
@@ -14,7 +15,9 @@ import org.springframework.web.socket.WebSocketSession;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.stream.Collectors;
 
 import static backend.like_house.global.socket.handler.TextHandler.chatSessionRoom;
 
@@ -80,6 +83,29 @@ public class SocketUtil {
             }
         }
     }
+
+    public Set<Tuple> sendPushNotification(List<Tuple> ourUserInfo, ChattingDTO.MessageDTO chattingDTO) {
+        Set<WebSocketSession> webSocketSessions = new CopyOnWriteArraySet<>();
+        webSocketSessions.addAll(chatSessionRoom.get(0L));
+        webSocketSessions.addAll(chatSessionRoom.get(chattingDTO.getChatRoomId()));
+
+        Set<Tuple> usersToNotify = ourUserInfo.stream()
+                .filter(tuple -> {
+                    String email = tuple.get(0, String.class);
+                    SocialType social = tuple.get(1, SocialType.class);
+                    for (WebSocketSession s : webSocketSessions) {
+                        if (email.equals(s.getAttributes().get("email").toString()) && social.equals(s.getAttributes().get("social"))) {
+                            return false;
+                        }
+                    }
+                    return true;
+                })
+                .collect(Collectors.toSet());
+
+        System.out.println(usersToNotify);
+        return usersToNotify;
+    }
+
 
 
     public void exitAllSessionChatRoom(WebSocketSession ownSession) {
