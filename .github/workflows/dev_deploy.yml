@@ -22,7 +22,7 @@ jobs:
 
       - name: Setup Firebase Config
         run: |
-          echo "${{ secrets.FIREBASE_CONFIG }}" > src/main/resources/firebase-admin-key.json
+          echo "${{ secrets.FIREBASE_CONFIG }}" > ./src/main/resources/firebase-admin-key.json
         shell: bash
 
       - name: Grant execute permission for gradlew
