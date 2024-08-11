@@ -1,12 +1,11 @@
 package backend.like_house.domain.notification.controller;
 
-import backend.like_house.domain.notification.dto.NotificationDTO;
 import backend.like_house.domain.notification.dto.NotificationDTO.NotificationResponseListDTO;
-import backend.like_house.domain.notification.entity.Notification;
 import backend.like_house.domain.notification.service.NotificationQueryService;
 import backend.like_house.domain.user.entity.User;
 import backend.like_house.global.common.ApiResponse;
 import backend.like_house.global.security.annotation.LoginUser;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,7 +21,7 @@ public class NotificationController {
     private final NotificationQueryService notificationQueryService;
 
     @GetMapping("/{familySpaceId}/notifications")
-    public ApiResponse<NotificationResponseListDTO> getNotifications(@LoginUser User user, @PathVariable Long familySpaceId, @RequestParam(name = "notificationRequestType") NotificationRequestType notificationRequestType, @RequestParam(name = "cursor") Long cursor, @RequestParam(name = "take") Integer take) {
+    public ApiResponse<NotificationResponseListDTO> getNotifications(@Parameter(hidden = true) @LoginUser User user, @PathVariable Long familySpaceId, @RequestParam(name = "notificationRequestType") NotificationRequestType notificationRequestType, @RequestParam(name = "cursor") Long cursor, @RequestParam(name = "take") Integer take) {
         NotificationResponseListDTO notificationResponseListDTO = notificationQueryService.getNotifications(user, familySpaceId, notificationRequestType,cursor, take);
         return ApiResponse.onSuccess(notificationResponseListDTO);
     }
