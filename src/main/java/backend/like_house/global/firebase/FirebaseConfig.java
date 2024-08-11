@@ -15,11 +15,11 @@ import java.io.IOException;
 public class FirebaseConfig {
 
     @Value("${spring.firebase.config}")
-    private String fire;
+    private String firebaseConfig;
 
     @Bean
     public FirebaseApp firebaseApp() throws IOException {
-        ByteArrayInputStream serviceAccountStream = new ByteArrayInputStream(fire.getBytes());
+        ByteArrayInputStream serviceAccountStream = new ByteArrayInputStream(firebaseConfig.getBytes());
 
         FirebaseOptions options = FirebaseOptions.builder()
                 .setCredentials(GoogleCredentials.fromStream(serviceAccountStream))
