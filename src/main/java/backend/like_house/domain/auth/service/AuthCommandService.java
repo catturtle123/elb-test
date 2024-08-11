@@ -19,4 +19,6 @@ public interface AuthCommandService {
     void verifyCode(EmailDTO.EmailVerificationRequest request);
 
     void fcmSave(User user, AuthDTO.FcmRequest tokenRequest);
+
+    void fcmSignOut(User user);
 }
