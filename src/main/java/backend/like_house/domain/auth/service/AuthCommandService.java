@@ -9,7 +9,7 @@ public interface AuthCommandService {
 
     AuthDTO.SignUpResponse signUp(AuthDTO.SignUpRequest request);
 
-    AuthDTO.SignInResponse signIn(AuthDTO.SignInRequest request);
+    void signIn(HttpServletResponse response, AuthDTO.SignInRequest request);
 
     void signOut(HttpServletRequest request, HttpServletResponse response);
 

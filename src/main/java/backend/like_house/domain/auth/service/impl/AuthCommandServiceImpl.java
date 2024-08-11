@@ -58,7 +58,7 @@ public class AuthCommandServiceImpl implements AuthCommandService {
     }
 
     @Override
-    public AuthDTO.SignInResponse signIn(AuthDTO.SignInRequest signInRequest) {
+    public void signIn(HttpServletResponse response, AuthDTO.SignInRequest signInRequest) {
         // 일반 로그인 - 이메일로 사용자 조회
         User user = authRepository.findByEmailAndSocialType(signInRequest.getEmail(), SocialType.LOCAL)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
@@ -74,7 +74,8 @@ public class AuthCommandServiceImpl implements AuthCommandService {
         // Redis에 RefreshToken 저장
         redisUtil.saveRefreshToken(user.getEmail(), user.getSocialType(), refreshToken);
 
-        return AuthConverter.toSignInResponseDTO(accessToken, refreshToken);
+        jwtUtil.setCookie(response, "accessToken", accessToken, 1800); // 30분
+        jwtUtil.setCookie(response, "refreshToken", refreshToken, 604800); // 1주일
     }
 
     @Override

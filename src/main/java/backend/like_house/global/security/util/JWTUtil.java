@@ -8,13 +8,16 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.jdbc.Expectation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -137,24 +140,6 @@ public class JWTUtil {
         return tokenFromRedis != null && tokenFromRedis.equals(refreshToken);
     }
 
-    // AccessToken + RefreshToken 헤더에 실어서 보내기
-    public void sendAccessAndRefreshToken(HttpServletResponse response, String accessToken, String refreshToken) {
-        response.setStatus(HttpServletResponse.SC_OK);
-        setAccessTokenHeader(response, accessToken);
-        setRefreshTokenHeader(response, refreshToken);
-
-    }
-
-    // AccessToken 헤더 설정
-    public void setAccessTokenHeader(HttpServletResponse response, String accessToken) {
-        response.setHeader(accessHeader, accessToken);
-    }
-
-    // RefreshToken 헤더 설정
-    public void setRefreshTokenHeader(HttpServletResponse response, String refreshToken) {
-        response.setHeader(refreshHeader, refreshToken);
-    }
-
     //JWT 토큰의 만료시간
     public Long getExpiration(String accessToken){
 
@@ -163,5 +148,17 @@ public class JWTUtil {
 
         long now = new Date().getTime();
         return expiration.getTime() - now;
+    }
+
+    public void setCookie(HttpServletResponse response, String name, String value, int maxAge) {
+        ResponseCookie cookie = ResponseCookie.from(name, value)
+                .path("/")
+                .sameSite("None")
+                .httpOnly(false)
+                .secure(true)
+                .maxAge(maxAge)
+                .build();
+
+        response.addHeader("Set-Cookie", cookie.toString());
     }
 }

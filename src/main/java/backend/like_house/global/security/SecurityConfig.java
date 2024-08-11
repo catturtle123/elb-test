@@ -94,7 +94,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                         "http://localhost:5173")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                 .allowedHeaders("*")
-                .exposedHeaders("Authorization", "Authorization-refresh")
+                .exposedHeaders("Set-Cookie")
                 .allowCredentials(true)
                 .maxAge(3600);
     }
