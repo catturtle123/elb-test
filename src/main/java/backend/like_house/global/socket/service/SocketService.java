@@ -77,7 +77,7 @@ public class SocketService {
         log.info("ChatSessionRoom 현황 : " + TextHandler.chatSessionRoom);
     }
 
-    @Transactional
+
     public void handleTalk(WebSocketSession session, ChattingDTO.MessageDTO chattingDTO) {
         if (!TextHandler.chatSessionRoom.containsKey(chattingDTO.getChatRoomId()) ||
                 !TextHandler.chatSessionRoom.get(chattingDTO.getChatRoomId()).contains(session)) {
@@ -109,7 +109,7 @@ public class SocketService {
             User receiver = userRepository.findByEmailAndSocialType(email, socialType).orElseThrow(()-> new ChatRoomException(ErrorStatus.USER_NOT_FOUND));
             if (receiver.getChatAlarm()) {
                 notificationCommandService.saveNotification(sender, receiver, chatRoom.getTitle(), chattingDTO.getContent(), NotificationType.CHAT);
-                fcmService.sendNotification(receiver.getFcmToken(), chatRoom.getTitle(), chattingDTO.getContent());
+                fcmService.sendNotification(receiver, chatRoom.getTitle(), chattingDTO.getContent());
             }
         });
 

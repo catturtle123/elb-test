@@ -110,4 +110,8 @@ public class User extends BaseEntity {
     public void addFcmToken(String fcmToken) {
         this.fcmToken = fcmToken;
     }
+
+    public void signOutFCM() {
+        this.fcmToken = null;
+    }
 }

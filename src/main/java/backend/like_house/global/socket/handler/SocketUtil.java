@@ -8,7 +8,6 @@ import backend.like_house.global.error.handler.ChatException;
 import backend.like_house.global.socket.dto.ChattingDTO;
 import backend.like_house.global.socket.dto.ChattingDTO.MessageDTO;
 import com.querydsl.core.Tuple;
-import com.querydsl.core.types.dsl.Expressions;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -86,7 +85,8 @@ public class SocketUtil {
     }
 
     public Set<Tuple> sendPushNotification(List<Tuple> ourUserInfo, ChattingDTO.MessageDTO chattingDTO) {
-        Set<WebSocketSession> webSocketSessions = chatSessionRoom.get(0L);
+        Set<WebSocketSession> webSocketSessions = new CopyOnWriteArraySet<>();
+        webSocketSessions.addAll(chatSessionRoom.get(0L));
         webSocketSessions.addAll(chatSessionRoom.get(chattingDTO.getChatRoomId()));
 
         Set<Tuple> usersToNotify = ourUserInfo.stream()

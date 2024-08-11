@@ -49,13 +49,13 @@ public class CommentCommandServiceImpl implements CommentCommandService {
         // 게시 물에 댓글이 달렸을 때
         if (parent == null && post.getPostAlarm() && post.getUser().getCommentAlarm()) {
             notificationCommandService.saveNotification(user, post.getUser(),user.getName()+"가 게시 물에 댓글을 달았 습니다.", request.getContent(), NotificationType.POST);
-            fcmService.sendNotification(post.getUser().getFcmToken(), user.getName()+"가 게시 물에 댓글을 달았 습니다.", request.getContent());
+            fcmService.sendNotification(post.getUser(), user.getName()+"가 게시 물에 댓글을 달았 습니다.", request.getContent());
         }
 
         // 댓글에 대 댓글이 달렸을 때
         if (parent != null && parent.getCommentAlarm() && post.getUser().getCommentReplyAlarm()) {
             notificationCommandService.saveNotification(user, parent.getUser(),user.getName()+"가 댓글에 대 댓글을 달았 습니다.", request.getContent(), NotificationType.POST);
-            fcmService.sendNotification(parent.getUser().getFcmToken(), user.getName()+"가 댓글에 대 댓글을 달았 습니다.", request.getContent());
+            fcmService.sendNotification(parent.getUser(), user.getName()+"가 댓글에 대 댓글을 달았 습니다.", request.getContent());
         }
 
         return CommentConverter.toCreateCommentResponse(comment);
